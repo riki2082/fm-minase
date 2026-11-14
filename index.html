@@ -89,7 +89,7 @@ h3.sub{font-size:17px;font-weight:700;border-left:4px solid var(--main2);padding
 .ep h4{font-size:15px}.ep .d{font-size:12px;color:var(--muted)}
 .ep .tr{font-size:13.5px;margin-top:10px;max-height:0;overflow:hidden;transition:max-height .4s}
 .ep.open .tr{max-height:1200px}
-.ep .tr p{margin:4px 0}.ep .tr .gap{color:var(--muted)}
+.ep .tr p{margin:4px 0}.ep .tr .nzl{color:var(--muted);letter-spacing:.08em}
 .ep .tr p.now{background:#fff6e8}
 .form{display:grid;gap:12px;max-width:560px}
 .form label{font-size:13px;color:var(--main);display:block;margin-bottom:4px}
@@ -109,7 +109,9 @@ footer{background:var(--foot);color:#c5dcde;font-size:13px;padding:46px 0 22px}
 @media(max-width:760px){.fcols{grid-template-columns:1fr 1fr}.fcols>div:first-child{grid-column:1/-1}}
 /* ===== ウェブラジオ ===== */
 .radio{max-width:520px;margin:0 auto;background:#2b2621;border-radius:16px;padding:22px;color:#e9dfcf;box-shadow:0 10px 30px rgba(0,0,0,.25);user-select:none;-webkit-user-select:none;touch-action:none}
-.radio .disp{background:#0d1a14;border-radius:6px;padding:14px;text-align:center;font-family:"Jost";color:#9fe3b4;text-shadow:0 0 8px rgba(110,230,150,.5)}
+.radio .disp{--nz:0;position:relative;overflow:hidden;background:#0d1a14;border-radius:6px;padding:14px;text-align:center;font-family:"Jost";color:#9fe3b4;text-shadow:0 0 8px rgba(110,230,150,.5)}
+.radio .disp::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:calc(var(--nz)*2.4);background:repeating-linear-gradient(0deg,rgba(200,255,220,.18) 0 1px,transparent 1px 3px);animation:nz .12s steps(2) infinite}
+@keyframes nz{50%{transform:translateY(2px)}}
 .radio .disp b{font-size:44px;font-weight:500;letter-spacing:.04em}.radio .disp small{font-size:14px;margin-left:6px}
 .radio .st{font-size:12.5px;font-family:"Noto Sans JP";min-height:20px;color:#bfe9c9}
 .scale{position:relative;height:38px;margin:14px 0 6px;background:#efe3c8;border-radius:4px;overflow:hidden}
@@ -129,8 +131,8 @@ footer{background:var(--foot);color:#c5dcde;font-size:13px;padding:46px 0 22px}
 .cast .row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .cast input{flex:1;min-width:0;font:inherit;font-size:16px;padding:9px 10px;background:#1b1a17;border:1px solid #47423a;color:#efe8db}
 .cast button{font:inherit;font-size:14px;background:#2b2722;color:#efe8db;border:1px solid #5a5247;padding:9px 14px;cursor:pointer}
-.cast .ptt{width:100%;padding:16px;font-size:15px;letter-spacing:.2em;touch-action:none;user-select:none;-webkit-user-select:none}
-.cast .ptt.rec{background:#5a2a1c;border-color:#a0503a}
+.card-post{margin-top:18px;background:#efe6d2;color:#2a2018;padding:16px 18px;border-radius:2px;font-family:"Noto Serif JP",serif}
+.card-post input{width:100%;margin-top:8px;background:transparent;border:none;border-bottom:1px solid #8a7a60;color:#2a2018;font:inherit;font-size:18px;padding:6px 2px}
 .msg{min-height:22px;font-size:13px;margin-top:8px;color:#d9a07a}
 #end{position:fixed;inset:0;background:#000;color:#ded8cc;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:"Noto Serif JP",serif;text-align:center;overflow-y:auto}
 #end p{opacity:0;transition:opacity 1.6s;margin:7px 0;font-size:15.5px;letter-spacing:.12em}
@@ -184,21 +186,6 @@ const rn=()=>S.rn||"名無し";
 const now=new Date();const pad=n=>String(n).padStart(2,"0");
 const todayDot=`${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())}`;
 const GHOST=89.4, HOME=78.6;
-
-/* ===== 読み上げ ===== */
-function voice(){const v=speechSynthesis.getVoices().filter(v=>/ja/i.test(v.lang));return v[0]||null}
-function speak(lines,opt){
-  // lines: [{t:読み上げる文, i:書き起こしの行番号, pitch, rate}]
-  speechSynthesis.cancel();
-  let k=0;
-  const next=()=>{
-    if(k>=lines.length){opt.end&&opt.end();return}
-    const L=lines[k++];const u=new SpeechSynthesisUtterance(L.t);u.lang="ja-JP";const v=voice();if(v)u.voice=v;
-    u.rate=L.rate||1;u.pitch=L.pitch||1;u.volume=L.vol??1;
-    u.onstart=()=>opt.each&&opt.each(L);u.onend=next;u.onerror=next;speechSynthesis.speak(u);
-  };
-  next();
-}
 
 /* ===== データ ===== */
 const PAGES=[["timetable","番組表"],["personality","パーソナリティ"],["listen","聴き逃し配信"],["mail","お便り"],["history","FMみなせの歩み"]];
@@ -266,12 +253,11 @@ function vMail(){
   </div></section>`;
 }
 function vFaq(){
-  let f=[["スマホでの選局のしかたは？","「聴き逃し配信」ページのウェブラジオで、電源を入れてから、スマートフォンを持ったままゆっくり体の向きを変えてください。向きに合わせて周波数が変わります。パソコンの方は、つまみをドラッグして回してください。"],
-   ["78.6MHz以外の周波数は？","FMみなせの周波数は78.6MHzのみです。"]];
-  if(S.stage>=1) f.push(["聴き逃し配信に、雑音の入る回があります","雑音の中身は、受信エリアのページに。","読み上げられた「八十九点」と、灯台が4秒に1回光ることを合わせると、周波数は89.4です。体を、灯台の方角へ。"]);
-  if(S.stage>=2) f.push(["雑音がひどくて聴こえません","古いラジオは、叩けば直る。と、潮田ゲンが申しております。","スマートフォンを、何度か軽く振ってください。パソコンの方は、ラジオを素早く何度もクリック。"]);
-  if(S.stage>=4) f.push(["ナギさんの本当の名前は？","お便りの中と、パーソナリティのページに。","下の名前は、迷子のカナリアちゃんのお便りに。苗字は、みさきさんのプロフィールに。……カナリアちゃんは、誰だったのでしょう。"],
-     ["声が届きません","トークバックのボタンを押しているあいだだけ、マイクが入ります。","届かないときは、文字でも呼びかけられます。"]);
+  let f=[["スマホでの選局のしかたは？","「聴き逃し配信」ページのウェブラジオで電源を入れてから、スマートフォンを持ったまま、ゆっくり体の向きを変えてください。向きに合わせて周波数が変わります。パソコンの方は、つまみをドラッグして回してください。"],
+   ["78.6MHz以外の周波数は？","FMみなせの周波数は78.6MHzのみです。"],
+   ["聴き逃し配信の文字起こしが欠けています","欠けた文字は、前後から補えます。","「はちじゅうきゅう、てん」。残りは、灯台が一度まばたきするあいだ＝光る間隔。受信エリアのページをご覧ください。"]];
+  if(S.stage>=2) f.push(["雑音がひどくて読めません","古いラジオは、叩けば直る。と、潮田ゲンが申しております。","スマートフォンを、何度か軽く振ってください。パソコンの方は、ラジオの本体を素早く何度もクリック。"]);
+  if(S.stage>=4) f.push(["ナギさんの本当の名前は？","お便りの中と、パーソナリティのページに。","下の名前は、迷子のカナリアちゃんのお便りに。苗字は、みさきさんのプロフィールに。……カナリアちゃんは、誰だったのでしょう。"]);
   if(S.ends.length) f.push(["結末はひとつですか？","三つあります。"]);
   return head("FAQ","よくある質問")+`<section style="padding-top:10px"><div class="inner" style="max-width:820px">${f.map(x=>`<div class="q">${x[0]}</div><div class="a">${x[1]}${x[2]?`<details class="h2"><summary>さらにヒントを見る</summary>${x[2]}</details>`:""}</div>`).join("")}</div></section>`;
 }
@@ -283,12 +269,12 @@ function notFound(){return head("404","ページが見つかりません")+`<sec
 
 /* ===== 聴き逃し配信（読み上げ） ===== */
 const EP1=[
- {t:"おはようございます。おはようみなせ、パーソナリティのみさきです。",s:"おはようございます。おはようみなせ、パーソナリティのみさきです。"},
- {t:"今日のみなせは、晴れのち、くもり。海は、おだやかです。",s:"今日のみなせは、晴れのち、くもり。海は、おだやかです。"},
- {t:"さて、開局三十周年の企画、思い出のラジオ番組。たくさんのお便りを、ありがとうございます。",s:"さて、開局30周年の企画「思い出のラジオ番組」。たくさんのお便りを、ありがとうございます。"},
- {t:"なかでも多かったのが、むかしの深夜番組、ミッドナイト・ポスト。わたしも子どものころ、聴いていた気がします。",s:"なかでも多かったのが、むかしの深夜番組「ミッドナイト・ポスト」。わたしも子どものころ、聴いていた気がします。"},
- {t:"……はちじゅう……きゅう……てん……。……のこりは……とうだいが……いちど、まばたきする、あいだ……",s:"（ノイズのため、聞き取れません）",hid:1,rate:.7,pitch:.6},
- {t:"あれ、いま、何か混線しましたね。失礼しました。それでは、一曲目。",s:"あれ、いま何か混線しましたね。失礼しました。それでは、一曲目。"},
+ "おはようございます。おはようみなせ、パーソナリティのみさきです。",
+ "今日のみなせは、晴れのち、くもり。海は、おだやかです。",
+ "さて、開局30周年の企画「思い出のラジオ番組」。たくさんのお便りを、ありがとうございます。",
+ "なかでも多かったのが、むかしの深夜番組「ミッドナイト・ポスト」。わたしも子どものころ、聴いていた気がします。",
+ "<span class='nzl'>（ノイズ）……は■じゅ■……き■う……て■……。……の■りは……■うだいが……いちど、ま■たきする、あい■……</span>",
+ "あれ、いま何か混線しましたね。失礼しました。それでは、一曲目。",
 ];
 function vListen(){
   return head("LISTEN","ラジオを聴く・聴き逃し配信")+`<section style="padding-top:20px"><div class="inner">
@@ -301,26 +287,20 @@ function vListen(){
   </div>
   <div id="cast"></div>
   <h3 class="sub">聴き逃し配信</h3>
-  <div class="ep" id="ep1"><h4>おはようみなせ</h4><div class="d">前日放送分（冒頭3分）</div>
-   <div class="row" style="margin-top:8px;display:flex;gap:8px"><button class="btn" id="play1">▶ 再生</button><button class="btn" id="tr1">書き起こしを見る</button></div>
-   <div class="tr" id="trx">${EP1.map((l,i)=>`<p data-i="${i}" class="${l.hid?"gap":""}">${l.s}</p>`).join("")}</div></div>
+  <div class="ep" id="ep1"><h4>おはようみなせ</h4><div class="d">前日放送分（冒頭3分）・自動文字起こし</div>
+   <div class="row" style="margin-top:8px;display:flex;gap:8px"><button class="btn" id="tr1">文字起こしを読む</button></div>
+   <div class="tr" id="trx">${EP1.map(l=>`<p>${l}</p>`).join("")}</div></div>
   <div class="ep"><h4>夕なぎジャーナル</h4><div class="d">配信準備中</div></div>
   <div class="ep"><h4>ミッドナイト・ポスト</h4><div class="d">2004年 放送終了　／　配信予定はありません</div></div>
-  <p class="note">※ 聴き逃し配信は、音声読み上げでお届けしています。音量にご注意ください。</p>
+  <p class="note">※ 聴き逃し配信は、自動文字起こしでお届けしています。電波の状態により、一部が欠けることがあります。</p>
   </div></section>`;
 }
 
 /* ===== ウェブラジオ（コンパス選局） ===== */
 let R={on:false,fq:HOME,lock:0,raf:0,heading:null,src:null,noise:null,gain:null,shakes:[],clear:false};
-let AC=null;
-function audio(){try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume()}catch(e){}}
-function noiseStart(){
-  if(!AC||R.src)return;
-  const b=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
-  R.src=AC.createBufferSource();R.src.buffer=b;R.src.loop=true;const f=AC.createBiquadFilter();f.type="bandpass";f.frequency.value=1800;f.Q.value=.6;
-  R.gain=AC.createGain();R.gain.gain.value=0;R.src.connect(f).connect(R.gain).connect(AC.destination);R.src.start();
-}
-function noiseLevel(v){if(R.gain)R.gain.gain.setTargetAtTime(v,AC.currentTime,.1)}
+
+function noiseStart(){}
+function noiseLevel(v){const d=document.querySelector(".radio .disp");if(d)d.style.setProperty("--nz",v)}
 function drawScale(){
   const sc=document.getElementById("scale");if(!sc)return;let h="";
   for(let f=76;f<=95;f+=.5){const x=(f-76)/19*100;h+=`<i class="tk" style="left:${x}%;height:${f%1===0?14:7}px"></i>${f%2===0?`<span class="lb" style="left:${x}%">${f}</span>`:""}`}
@@ -335,8 +315,8 @@ function setFq(f){
   const st=document.getElementById("rst");
   const dG=Math.abs(R.fq-GHOST),dH=Math.abs(R.fq-HOME);
   if(dH<.15){st.textContent="FMみなせ　おはようみなせ（放送中）";noiseLevel(.02)}
-  else if(dG<.15&&S.stage>=1&&S.stage<9){st.textContent=S.stage>=3?"……受信中":"……ザ……ザザ……誰かの声……";noiseLevel(S.stage>=3?.02:.32);if(S.stage>=3)showCast()}
-  else{st.textContent="……";noiseLevel(dG<.8&&S.stage>=1?.22:.12)}
+  else if(dG<.15&&S.stage<9){st.textContent=S.stage>=3?"……受信中":"……ザ……ザザ……（文字が、ちらつく）";noiseLevel(S.stage>=3?.02:.32);if(S.stage>=3)showCast()}
+  else{st.textContent="……";noiseLevel(dG<.8?.22:.12)}
 }
 function onHeading(hd){R.heading=hd;if(R.on&&!R.drag)setFq(76+((hd%360)+360)%360/360*19)}
 window.addEventListener("deviceorientation",e=>{if(typeof e.webkitCompassHeading==="number")onHeading(e.webkitCompassHeading)});
@@ -355,7 +335,6 @@ function bindRadio(){
   drawScale();setFq(R.fq);
   const pwr=document.getElementById("pwr"),kn=document.getElementById("knob");
   pwr.onclick=()=>{
-    audio();
     try{if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==="function")DeviceOrientationEvent.requestPermission().catch(()=>{});
         if(window.DeviceMotionEvent&&typeof DeviceMotionEvent.requestPermission==="function")DeviceMotionEvent.requestPermission().catch(()=>{})}catch(e){}
     R.on=!R.on;pwr.textContent=R.on?"電源を切る":"電源を入れる";
@@ -374,82 +353,52 @@ function tick(){
   cancelAnimationFrame(R.raf);
   const loop=()=>{
     if(!document.getElementById("radio")||!R.on)return;
-    if(S.stage===1&&Math.abs(R.fq-GHOST)<.15){R.lock+=1;if(R.lock>90){setStage(2);R.lock=0;setFq(R.fq);document.getElementById("rhint").textContent="……ひどい雑音だ。"}}else R.lock=0;
+    if(S.stage<=1&&Math.abs(R.fq-GHOST)<.15){R.lock+=1;if(R.lock>90){setStage(2);R.lock=0;setFq(R.fq);document.getElementById("rhint").textContent="……ひどい雑音だ。"}}else R.lock=0;
     R.raf=requestAnimationFrame(loop)};loop();
 }
 
-/* ===== 消えた放送 ===== */
-function castLines(){
-  return [
-  {t:"……こんばんは。ミッドナイト・ポスト、夜野ナギです。",p:1.05},
-  {t:"二千四年、十一月十四日。今夜も、みなせ岬の灯台の上から、お届けしています。",p:1.05},
-  {t:"さっそく、最初のお便り。ラジオネーム、迷子のカナリアちゃん。",p:1.05},
-  {t:"ナギさん、こんばんは。わたしは十さいです。いま、灯台の下にいます。くらくて、帰り道がわかりません。",p:1.35,r:.9},
-  {t:"わたしのママも、ラジオのお仕事をしています。ママの名前は、とうこ。とうだいの、とうに、こどものこ、です。",p:1.35,r:.9},
-  {t:"ママに、むかえにきてほしい。",p:1.35,r:.85},
-  {t:"…………カナリアちゃん。……今、行くからね。そこで、待ってて。",p:1,r:.85},
-  {t:"……次のお便り。ラジオネーム、"+rn()+"さん。",p:1.05},
-  {t:S.msg||"……白紙の、ハガキですね。",p:1.05},
-  {t:"……あれ。このお便り、消印が……ずいぶん、先の日付ですね。",p:1,r:.9},
-  {t:"……ねえ、"+rn()+"さん。あなたには、わたしの声が、届いているのかな。",p:1,r:.85},
-  {t:"この番組、ずっと、終われないんです。だれか、わたしの、ほんとうの名前を、呼んでくれたら……",p:.95,r:.8},
-  ];
-}
-function castText(L,i){
-  const txt=[ "こんばんは。ミッドナイト・ポスト、夜野ナギです。","2004年11月14日。今夜も、みなせ岬の灯台の上から、お届けしています。","さっそく、最初のお便り。ラジオネーム「迷子のカナリア」ちゃん。",
+/* ===== 消えた放送（文字で受信） ===== */
+function castText(){
+  return ["こんばんは。ミッドナイト・ポスト、夜野ナギです。","2004年11月14日。今夜も、みなせ岬の灯台の上から、お届けしています。","さっそく、最初のお便り。ラジオネーム「迷子のカナリア」ちゃん。",
    "『ナギさん、こんばんは。わたしは10さいです。いま、灯台の下にいます。くらくて、帰り道がわかりません。』","『わたしのママも、ラジオのお仕事をしています。ママの名前は、とうこ。灯台の灯に、子どもの子、です。』","『ママに、むかえにきてほしい。』",
-   "……カナリアちゃん。……今、行くからね。そこで、待ってて。",`……次のお便り。ラジオネーム「${esc(rn())}」さん。`,`『${esc(S.msg)||"（白紙）"}』`,"……あれ。このお便り、消印が……ずいぶん、先の日付ですね。",`……ねえ、${esc(rn())}さん。あなたには、わたしの声が、届いているのかな。`,"この番組、ずっと、終われないんです。だれか、わたしの、ほんとうの名前を、呼んでくれたら……"];
-  return txt[i];
+   "……カナリアちゃん。……今、行くからね。そこで、待ってて。",`……次のお便り。ラジオネーム「${esc(rn())}」さん。`,`『${esc(S.msg)||"（白紙のハガキ）"}』`,"……あれ。このお便り、消印が……ずいぶん、先の日付ですね。",`……ねえ、${esc(rn())}さん。このお便りは、どうやって届いたのかな。`,"この番組、ずっと、終われないんです。だれかが、わたしの、ほんとうの名前を書いて、送ってくれたら……"];
 }
 function showCast(){
   const c=document.getElementById("cast");if(!c||document.getElementById("castbox"))return;
-  const L=castLines();
-  c.innerHTML=`<div class="cast" id="castbox"><p class="nz">――ザ……ザ………</p>${L.map((l,i)=>`<p data-c="${i}">${castText(l,i)}</p>`).join("")}<p class="nz">――ザ………………</p><div id="talk">${S.stage>=4?talkUI():`<button id="listenBtn" style="width:100%;margin-top:10px">耳をすます</button>`}</div></div>`;
-  if(S.stage>=4) {c.querySelectorAll(".cast p").forEach(p=>p.classList.add("on"));bindTalk();}
-  const lb=document.getElementById("listenBtn");
-  if(lb) lb.onclick=()=>{lb.disabled=true;lb.textContent="……";
-    speak(L.map((l,i)=>({t:l.t,i,pitch:l.p,rate:(l.r||.95)})),{each:x=>{const p=c.querySelector(`[data-c="${x.i}"]`);if(p){p.classList.add("on");p.scrollIntoView({behavior:"smooth",block:"center"})}},
-      end:()=>{setStage(4);document.getElementById("talk").innerHTML=talkUI();bindTalk()}});
-    // 読み上げが使えない環境でも進めるように
-    setTimeout(()=>{if(!speechSynthesis.speaking&&S.stage<4){c.querySelectorAll(".cast p").forEach(p=>p.classList.add("on"));setStage(4);document.getElementById("talk").innerHTML=talkUI();bindTalk()}},2500);
-  };
+  const L=castText();
+  c.innerHTML=`<div class="cast" id="castbox"><p class="nz on">――ザ……ザ………（文字放送を受信しています）</p>${L.map((l,i)=>`<p data-c="${i}">${l}</p>`).join("")}<p class="nz" data-c="${L.length}">――ザ………………</p><div id="talk"></div></div>`;
+  const ps=[...c.querySelectorAll("[data-c]")];
+  const done=()=>{ps.forEach(p=>p.classList.add("on"));setStage(4);document.getElementById("talk").innerHTML=talkUI();bindTalk()};
+  if(S.stage>=4){done();return}
+  let k=0;clearInterval(R.cast);
+  R.cast=setInterval(()=>{if(!document.body.contains(c)){clearInterval(R.cast);return}
+    if(k<ps.length){ps[k].classList.add("on");k++}else{clearInterval(R.cast);done()}},2300);
   c.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function talkUI(){
-  return `<p style="margin-top:16px;font-size:13px;color:#a39c90">ラジオの横に、古いトークバックのボタンがある。押しているあいだだけ、声がスタジオに届くらしい。</p>
-  <button class="ptt" id="ptt">押しながら、呼びかける</button><div class="msg" id="tmsg"></div>
-  <div class="row"><input id="tname" placeholder="声が届かないときは、文字で" autocomplete="off"><button id="tsend">呼びかける</button></div>`;
+  return `<div class="card-post"><p style="font-size:13px;color:#6b5a40">ナギさんへ</p>
+  <p style="font-size:13px;color:#6b5a40;margin-top:6px">あなたの、ほんとうの名前は――</p>
+  <input id="tname" placeholder="ひらがな、または漢字で" autocomplete="off">
+  <p style="text-align:right;font-size:11.5px;color:#8a7a60;margin-top:6px">宛先：89.4MHz　ミッドナイト・ポスト係</p></div>
+  <div class="row"><button id="tsend" style="flex:1">ハガキを、電波に乗せる</button></div><div class="msg" id="tmsg"></div>`;
 }
-function checkName(raw,fromVoice){
+function checkName(raw){
   const v=norm(raw);const m=document.getElementById("tmsg");
-  const sur=/(みさき|岬|三崎|美咲|岬)/.test(v)||/みさき/.test(v), giv=/(とうこ|灯子|東子|冬子|透子|塔子|桃子)/.test(v);
+  const sur=/(みさき|岬)/.test(v), giv=/(とうこ|灯子)/.test(v);
   if(sur&&giv){ending(3);return}
-  if(/(なぎ|凪|ナギ)/.test(raw)||v.includes("よるのなぎ")){m.textContent="「……それは、番組の名前」";return}
-  if(giv&&!sur){m.textContent="「……うん。……それと？」";return}
-  if(fromVoice){m.textContent="……ザ……ザザ……（届かなかったようだ）";return}
   if(!v){m.textContent="";return}
+  if(/(なぎ|凪)/.test(v)){m.textContent="……ザ……（「それは、番組の名前」と、かすかに表示された）";return}
+  if(giv&&!sur){m.textContent="……ザ……（「……それと？」と、かすかに表示された）";return}
   ending(1);
 }
-function bindTalk(){
-  const b=document.getElementById("ptt"),ts=document.getElementById("tsend");
-  if(ts) ts.onclick=()=>checkName(document.getElementById("tname").value,false);
-  if(!b)return;
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){b.disabled=true;b.textContent="（この端末では、声のボタンは使えないようです）";return}
-  let rec=null,got="";
-  const start=e=>{e.preventDefault();speechSynthesis.cancel();got="";b.classList.add("rec");b.textContent="……話してください";
-    try{rec=new SR();rec.lang="ja-JP";rec.interimResults=true;rec.onresult=ev=>{got=[...ev.results].map(r=>r[0].transcript).join("");document.getElementById("tmsg").textContent="「"+got+"」"};rec.onerror=()=>{};rec.start()}catch(err){}};
-  const stop=()=>{if(!b.classList.contains("rec"))return;b.classList.remove("rec");b.textContent="押しながら、呼びかける";try{rec&&rec.stop()}catch(e){}setTimeout(()=>{if(got)checkName(got,true);else document.getElementById("tmsg").textContent="……ザ……（何も、届かなかった）"},700)};
-  b.addEventListener("pointerdown",start);["pointerup","pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,stop));
-  b.addEventListener("contextmenu",e=>e.preventDefault());
-}
+function bindTalk(){const ts=document.getElementById("tsend");if(ts)ts.onclick=()=>checkName(document.getElementById("tname").value)}
 
 /* ===== ルーティング ===== */
 const VIEWS={top:vTop,timetable:vTimetable,personality:vPersonality,listen:vListen,mail:vMail,history:vHistory,area:vArea,faq:vFaq,news:vNews,credits:vCredits};
 let lastHash="";
 function route(){
   const h=(location.hash||"#top").slice(1);
-  speechSynthesis.cancel();
+  clearInterval(R.cast);
   document.getElementById("ticker").textContent= after(3)?"今夜25時、ミッドナイト・ポスト最終回を放送します": after(1)?`今夜も25時から、ミッドナイト・ポスト（パーソナリティ：${rn()}）`:"ON AIR　おはようみなせ（6:00〜9:00）";
   document.getElementById("gnav").innerHTML=PAGES.map(([k,v])=>`<a href="#${k}" class="${k===h?"on":""}">${v}</a>`).join("");
   document.getElementById("drawer").innerHTML=[...PAGES,...EXTRA].map(([k,v])=>`<a href="#${k}">${v}</a>`).join("");
@@ -467,23 +416,22 @@ function bind(h){
     bindRadio();
     const ep=document.getElementById("ep1");
     document.getElementById("tr1").onclick=()=>ep.classList.toggle("open");
-    document.getElementById("play1").onclick=()=>{ep.classList.add("open");
-      if(!window.speechSynthesis||!speechSynthesis.getVoices().some(v=>/ja/i.test(v.lang))&&!window._spokeOnce){window._spokeOnce=1;setTimeout(()=>{if(S.stage<1){const g=ep.querySelector(".gap");g.textContent="（ノイズ）……はちじゅう……きゅう……てん……のこりは……とうだいが……いちど、まばたきする、あいだ……";setStage(1)}},4000)}
-      speak(EP1.map((l,i)=>({t:l.t,i,rate:l.rate||1,pitch:l.pitch||1.1})),{each:x=>{ep.querySelectorAll(".tr p").forEach(p=>p.classList.toggle("now",+p.dataset.i===x.i));if(EP1[x.i].hid)setStage(1)},end:()=>ep.querySelectorAll(".tr p").forEach(p=>p.classList.remove("now"))})};
+    setStage0();
   }
 }
+function setStage0(){const t=document.getElementById("tr1");if(t)t.addEventListener("click",()=>{if(S.stage<1){S.stage=1;save()}})}
 
 /* ===== 結末 ===== */
 function endLines(id){
   const n=esc(rn());
   return {
-   1:["「……ちがう。それは、わたしの名前じゃない」","長い、長い沈黙。","「でも、来てくれて、ありがとう」","「かわりに――あなたが、続けてくれる？」",`今夜も25時。灯台の上のスタジオで、あなたはお便りを読んでいる。`,`「ミッドナイト・ポスト。パーソナリティの、${n}です」`],
+   1:["ハガキは、雑音の中に消えた。","しばらくして、表示に一行だけ。","「……ちがう。それは、わたしの名前じゃない」","「でも、来てくれて、ありがとう」","「かわりに――あなたが、続けてくれる？」",`今夜も25時。灯台の上のスタジオで、あなたはお便りを読んでいる。`,`「ミッドナイト・ポスト。パーソナリティの、${n}です」`],
    2:["電源を切ると、雑音が消えた。","部屋は、しんと静かになった。","……それでも、ときどき思う。","あの声は、今もどこかで、","誰にも届かないお便りを、読み続けているのだろうか、と。"],
-   3:["「……みさき、とうこ」","雑音が、すうっと引いていく。","「……ああ。久しぶりに、呼ばれた」","「カナリアちゃんはね、あのあと、ちゃんと見つかったんだよ」","「わたしが手を引いて、灯台の階段を、いっしょに降りたの」","「もう、大人になったかな。……ラジオの声、続けてるかな」","「ミッドナイト・ポスト、これにて、最終回です」","「おやすみなさい。……みさき」"]
+   3:["ハガキが、電波に乗った。","表示から、雑音がすうっと引いていく。","「……ああ。久しぶりに、その名前を見た」","「カナリアちゃんはね、あのあと、ちゃんと見つかったんだよ」","「わたしが手を引いて、灯台の階段を、いっしょに降りたの」","「もう、大人になったかな。……ラジオの声、続けてるかな」","「ミッドナイト・ポスト、これにて、最終回です」","「おやすみなさい。……みさき」"]
   }[id];
 }
 function ending(id){
-  speechSynthesis.cancel();noiseLevel(0);R.on=false;cancelAnimationFrame(R.raf);
+  clearInterval(R.cast);noiseLevel(0);R.on=false;cancelAnimationFrame(R.raf);
   if(!S.ends.includes(id))S.ends.push(id);S.stage=9;S.last=id;save();
   const lines=[...endLines(id),`<span class="en" style="font-size:13px;color:#9fd3d9">${id===3?"TRUE END":"END "+id}　―　${END_T[id]}</span>`,`<small style="font-size:12px;color:#7a8a8c">結末 ${S.ends.length} / 3</small>`];
   const d=document.createElement("div");d.id="end";
@@ -492,7 +440,6 @@ function ending(id){
   document.body.appendChild(d);
   const ps=d.querySelectorAll("p");ps.forEach((p,i)=>setTimeout(()=>p.classList.add("v"),700+i*1500));
   setTimeout(()=>d.querySelectorAll("button").forEach(b=>b.style.opacity=1),700+ps.length*1500);
-  if(id===3&&window.speechSynthesis) setTimeout(()=>speak([{t:"おやすみなさい。みさき。",pitch:1,rate:.8}],{}),700+7*1500);
   d.querySelector("#eb1").onclick=()=>{d.remove();location.hash="#top";route()};
   d.querySelector("#eb2").onclick=()=>{d.remove();S.stage=4;S.last=0;save();if(location.hash==="#listen")route();else location.hash="#listen"};
 }
@@ -500,7 +447,6 @@ document.getElementById("reset").onclick=function(){
   if(this.dataset.c){try{localStorage.removeItem(KEY)}catch(e){}S={stage:0,rn:"",msg:"",ends:[],last:0};this.dataset.c="";this.textContent="データを初期化";location.hash="#top";route()}
   else{this.dataset.c=1;this.textContent="本当に初期化する？（もう一度押す）"}
 };
-if(window.speechSynthesis)speechSynthesis.getVoices();
 route();
 </script>
 </body>
